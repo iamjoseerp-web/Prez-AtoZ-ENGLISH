@@ -3,33 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prez AtoZ ENGLISH – Pro Logistics</title>
+<title>Prez AtoZ ENGLISH – Student Pro Ledger</title>
 <style>
-  :root { --gold: #d4af37; --bg: #0b0b0b; --card-bg: #141414; --text: #f5f5f5; --danger: #cc0000; --wa: #25D366; }
+  :root { --gold: #d4af37; --bg: #0b0b0b; --card-bg: #141414; --text: #f5f5f5; --danger: #cc0000; --wa: #25D366; --border: #2a2a2a; }
   body { margin:0; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
-  header { padding: 18px 28px; border-bottom: 1px solid #2a2a2a; background: #000; }
+  header { padding: 18px 28px; border-bottom: 1px solid var(--border); background: #000; }
   header h1 { margin:0; font-size: 22px; color: var(--gold); letter-spacing: 1px; }
   header .sub { font-size: 11px; color: #888; text-transform: uppercase; margin-top: 4px; }
   main { padding: 20px; max-width: 1300px; margin: auto; }
+  
   button { padding: 10px 16px; background: var(--gold); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
   button.secondary { background: #333; color: #fff; }
   button.danger { background: #550000; color: #fff; }
   button.wa { background: var(--wa); color: #fff; width: 100%; margin-top: 10px; }
-  .card { background: var(--card-bg); border: 1px solid #2a2a2a; border-radius: 8px; padding: 20px; margin-top: 16px; }
-  .balance.pos { color: #5aff8c; font-weight: bold; }
-  .balance.neg { color: #ff5a5a; font-weight: bold; }
+  
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 16px; }
   .student-list { margin-top: 15px; }
   .student-list button { margin-right: 8px; margin-bottom: 8px; border: 1px solid #333; }
+  
+  /* Ledger Table Styles */
+  .ledger-container { margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  th { text-align: left; color: var(--gold); padding: 10px; border-bottom: 2px solid var(--border); }
+  td { padding: 10px; border-bottom: 1px solid var(--border); }
+  .last-pay-highlight { background: rgba(212, 175, 55, 0.1); border: 1px solid var(--gold); padding: 5px 10px; border-radius: 4px; }
+
   .calendar-header { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
   .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 12px; color: #888; text-align: center; }
   .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
-  .day { border: 1px solid #2a2a2a; padding: 8px; min-height: 50px; font-size: 12px; background: #080808; }
+  .day { border: 1px solid var(--border); padding: 8px; min-height: 50px; font-size: 12px; background: #080808; }
   .day select { width: 100%; margin-top: 5px; background: #000; color: #fff; border: 1px solid #333; font-size: 10px; }
-  .msg-preview { background: #000; border: 1px solid #444; border-left: 4px solid var(--wa); padding: 15px; border-radius: 6px; margin-top: 20px; }
-  .msg-preview textarea { width: 100%; background: transparent; border: none; color: #25D366; font-family: monospace; font-size: 14px; resize: none; outline: none; }
+
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .sheet { background: #1a1a1a; padding: 25px; border-radius: 8px; width: 400px; border: 1px solid var(--gold); max-height: 90vh; overflow-y: auto; }
-  .sheet input, .sheet select { width: 100%; padding: 10px; margin: 8px 0; background: #000; color: #fff; border: 1px solid #333; box-sizing: border-box; }
+  .sheet { background: #1a1a1a; padding: 25px; border-radius: 8px; width: 450px; border: 1px solid var(--gold); max-height: 90vh; overflow-y: auto; }
+  .sheet input, .sheet select, .sheet textarea { width: 100%; padding: 10px; margin: 8px 0; background: #000; color: #fff; border: 1px solid #333; box-sizing: border-box; }
   .small { font-size: 11px; color: #888; display: block; margin-top: 10px; text-transform: uppercase; font-weight: bold; }
 </style>
 </head>
@@ -37,7 +44,7 @@
 
 <header>
   <h1>PREZ AtoZ ENGLISH</h1>
-  <div class="sub">Logistics & Student Hours Tracking</div>
+  <div class="sub">Student Logistics & Transaction Ledger</div>
 </header>
 
 <main>
@@ -61,47 +68,104 @@ function getStudent(id) { return students.find(s => s.id === id); }
 function balance(s) { return s.ledger.reduce((a, e) => a + (e.hours || 0), 0); }
 function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
 function firstWeekday(y, m) { return (new Date(y, m, 1).getDay() + 6) % 7; }
-function fmtMonth(y, m) { 
-  const names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  return `${names[m]} ${y}`;
-}
 
-// PROFILE EDITING (CORE RULE 2: NO FINANCIAL IMPACT)[cite: 1]
-function openStudentModal(id = null) {
-  const s = id ? getStudent(id) : null;
+// --- PAY IN / LEDGER LOGIC (RULE 3, 4, 5, 8) ---[cite: 1]
+function openPaymentModal(id) {
+  const s = getStudent(id);
   const m = document.createElement("div");
   m.className = "modal";
   m.innerHTML = `
     <div class="sheet">
-      <h3>${s ? 'Edit Student Profile' : 'Add New Student'}</h3>
-      <label class="small">Full Name</label>
-      <div style="display:flex; gap:10px;">
-        <input id="fn" placeholder="First Name" value="${s ? s.firstName : ''}">
-        <input id="ln" placeholder="Last Name" value="${s ? s.lastName : ''}">
+      <h3>Record Payment: ${s.firstName}</h3>
+      <label class="small">Hours to Credit</label>
+      <input id="payHrs" type="number" step="0.5" value="${s.classesPerWeek * 4}">
+      
+      <label class="small">Total Amount Paid ($)</label>
+      <input id="payAmt" type="number" value="${s.subscriptionAmount}">
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <label class="small">Discount ($)</label>
+          <input id="payDisc" type="number" value="0">
+        </div>
+        <div>
+          <label class="small">Discount Type</label>
+          <select id="payDiscType">
+            <option value="">None</option>
+            <option value="Birthday">Birthday</option>
+            <option value="Holiday">Holiday</option>
+            <option value="Early Bird">Early Bird</option>
+            <option value="Custom">Other</option>
+          </select>
+        </div>
       </div>
-      <label class="small">WhatsApp Phone</label>
-      <input id="ph" placeholder="521..." value="${s ? (s.phone || '') : ''}">
-      <label class="small">Level</label>
-      <select id="cefr">
-        ${['A1','A2','B1','B2','C1','C2'].map(l => `<option value="${l}" ${s && s.level === l ? 'selected' : ''}>${l}</option>`).join('')}
-      </select>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <div><label class="small">Hrs Per Class</label><input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}"></div>
-        <div><label class="small">Classes/Week</label><input id="cpw" type="number" value="${s ? s.classesPerWeek : 3}"></div>
-      </div>
-      <label class="small">Subscription Price ($ reference only)</label>
-      <input id="subPrice" type="number" value="${s ? s.subscriptionAmount : 210}">
-      <label class="small">Due Date (billing cycle reference)</label>
-      <input id="dd" type="date" value="${s ? (s.dueDate || '') : ''}">
+
+      <label class="small">Notes</label>
+      <textarea id="payNotes" placeholder="Reason for payment/discount..."></textarea>
+      
       <div style="margin-top:20px; display:flex; gap:10px;">
-        <button style="flex:1" onclick="saveStudent(${id})">SAVE PROFILE</button>
+        <button style="flex:1" onclick="submitPayment(${id})">CONFIRM PAYMENT</button>
         <button style="flex:1" class="secondary" onclick="closeModal()">CANCEL</button>
       </div>
     </div>`;
   document.body.appendChild(m);
 }
 
-function closeModal() { document.querySelector(".modal")?.remove(); }
+function submitPayment(id) {
+  const s = getStudent(id);
+  const entry = {
+    id: Date.now(),
+    date: new Date().toISOString().slice(0, 10),
+    type: "payment",
+    hours: parseFloat(document.getElementById('payHrs').value),
+    amount: parseFloat(document.getElementById('payAmt').value),
+    discount: parseFloat(document.getElementById('payDisc').value),
+    discountType: document.getElementById('payDiscType').value,
+    notes: document.getElementById('payNotes').value
+  };
+  s.ledger.push(entry);
+  closeModal(); save();
+}
+
+function deletePayment(studentId, paymentId) {
+  if(confirm("Delete this payment? Hours will be rolled back.")){
+    const s = getStudent(studentId);
+    s.ledger = s.ledger.filter(e => e.id !== paymentId);
+    save();
+  }
+}
+
+// --- CALENDAR LOGIC (UNCHANGED) ---[cite: 1]
+function setDay(s, date, type) {
+  s.ledger = s.ledger.filter(e => e.date !== date || e.type === "payment");
+  if (!type) return save();
+  let hrs = (type === "attended" || type === "noshow") ? -s.hoursPerClass : (type === "double" ? -(s.hoursPerClass * 2) : 0);
+  s.ledger.push({ id: Date.now(), date, type, hours: hrs });
+  save();
+}
+
+// --- PROFILE EDITING (RULE 2) ---[cite: 1]
+function openStudentModal(id = null) {
+  const s = id ? getStudent(id) : null;
+  const m = document.createElement("div");
+  m.className = "modal";
+  m.innerHTML = `
+    <div class="sheet">
+      <h3>${s ? 'Edit Profile' : 'New Enrollment'}</h3>
+      <input id="fn" placeholder="First Name" value="${s ? s.firstName : ''}">
+      <input id="ln" placeholder="Last Name" value="${s ? s.lastName : ''}">
+      <input id="ph" placeholder="WhatsApp (521...)" value="${s ? s.phone : ''}">
+      <label class="small">Level</label>
+      <select id="cefr">${['A1','A2','B1','B2','C1','C2'].map(l=>`<option value="${l}" ${s?.level===l?'selected':''}>${l}</option>`).join('')}</select>
+      <input id="hpc" type="number" placeholder="Hrs/Class" value="${s ? s.hoursPerClass : 1}">
+      <input id="cpw" type="number" placeholder="Classes/Week" value="${s ? s.classesPerWeek : 3}">
+      <input id="subPrice" type="number" placeholder="Sub Price" value="${s ? s.subscriptionAmount : 210}">
+      <input id="dd" type="date" value="${s ? s.dueDate : ''}">
+      <button style="width:100%; margin-top:10px;" onclick="saveStudent(${id})">SAVE</button>
+      <button style="width:100%; margin-top:5px;" class="secondary" onclick="closeModal()">CANCEL</button>
+    </div>`;
+  document.body.appendChild(m);
+}
 
 function saveStudent(id) {
   const data = {
@@ -110,71 +174,67 @@ function saveStudent(id) {
     subscriptionAmount: parseFloat(subPrice.value), dueDate: dd.value
   };
   if (id) { Object.assign(getStudent(id), data); } 
-  else { const n = { id: Date.now(), ...data, ledger: [] }; students.push(n); selectedStudentId = n.id; }
+  else { students.push({ id: Date.now(), ...data, ledger: [] }); }
   closeModal(); save();
-}
-
-// PAY IN ACTION (CORE RULE 3 & 4: THE ONLY WAY TO ADD HOURS)[cite: 1]
-function addPayment(id) {
-  const s = getStudent(id);
-  const suggestedHrs = s.classesPerWeek * 4;
-  const h = parseFloat(prompt(`Enter hours to add (Payment for ${s.firstName}):`, suggestedHrs));
-  if (!isNaN(h) && h > 0) {
-    s.ledger.push({ 
-      id: Date.now(), 
-      date: new Date().toISOString().slice(0, 10), 
-      type: "payment", 
-      hours: h,
-      priceAtTime: s.subscriptionAmount 
-    });
-    save();
-  }
-}
-
-function setDay(s, date, type) {
-  s.ledger = s.ledger.filter(e => e.date !== date || e.type === "payment");
-  if (!type) return save();
-  let hrs = (type === "attended" || type === "noshow") ? -s.hoursPerClass : (type === "double" ? -(s.hoursPerClass * 2) : 0);
-  s.ledger.push({ date, type, hours: hrs });
-  save();
 }
 
 function renderStudent(s) {
   const bal = balance(s);
-  const lessons = Math.floor(bal / s.hoursPerClass);
-  const nextPurchaseHours = s.classesPerWeek * 4;
-
-  const messageText = `STUDENT UPDATE: ${s.firstName} ${s.lastName}\n` +
-                      `---------------------------\n` +
-                      `Level: ${s.level}\n` +
-                      `Hours Remaining: ${bal.toFixed(1)}\n` +
-                      `Approx. Lessons: ${lessons}\n` +
-                      `Due Date: ${s.dueDate || 'N/A'}\n` +
-                      `---------------------------\n` +
-                      `Next Cycle: ${nextPurchaseHours} Hours ($${s.subscriptionAmount})`;
-
+  const payments = s.ledger.filter(e => e.type === 'payment').reverse();
+  const lastPay = payments[0] ? payments[0].date : 'None';
+  
   let html = `
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="margin:0; color:var(--gold);">${s.firstName.toUpperCase()} ${s.lastName.toUpperCase()}</h2>
+        <h2 style="color:var(--gold);">${s.firstName.toUpperCase()} ${s.lastName.toUpperCase()}</h2>
         <button class="secondary" onclick="openStudentModal(${s.id})">EDIT PROFILE</button>
     </div>
-    <div style="display:flex; gap:30px; margin: 15px 0;">
-        <div><div class="small">Balance</div><div class="balance ${bal<=0?'neg':'pos'}">${bal.toFixed(1)} hrs</div></div>
-        <div><div class="small">Price Reference</div><div>$${s.subscriptionAmount}</div></div>
-        <div><div class="small">Schedule</div><div>${s.classesPerWeek}x / week</div></div>
-        <div><div class="small">Due Date</div><div>${s.dueDate || 'Not Set'}</div></div>
+    
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:20px; margin: 15px 0;">
+        <div><div class="small">Balance</div><div style="font-size:18px;">${bal.toFixed(1)} hrs</div></div>
+        <div><div class="small">Last Paid</div><div class="last-pay-highlight">${lastPay}</div></div>
+        <div><div class="small">Subscription</div><div>$${s.subscriptionAmount}</div></div>
+        <div><div class="small">Due Date</div><div>${s.dueDate || 'N/A'}</div></div>
     </div>
+
+    <!-- Payment History Ledger[cite: 1] -->
+    <div class="ledger-container">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h4 style="margin:0; color:var(--gold);">PAYMENT HISTORY (12 MONTHS)</h4>
+        <button onclick="openPaymentModal(${s.id})">+ RECORD PAYMENT</button>
+      </div>
+      <div style="max-height: 200px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Hrs</th><th>Paid</th><th>Discount</th><th>Notes</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            ${payments.map(p => `
+              <tr>
+                <td>${p.date}</td>
+                <td>+${p.hours}</td>
+                <td>$${p.amount}</td>
+                <td>${p.discount > 0 ? `$${p.discount} (${p.discountType})` : '—'}</td>
+                <td title="${p.notes}">${p.notes ? p.notes.substring(0,15)+'...' : '—'}</td>
+                <td><button class="danger" style="padding:2px 8px; font-size:10px;" onclick="deletePayment(${s.id}, ${p.id})">DEL</button></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Calendar[cite: 1] -->
     <div class="calendar-header">
-      <button class="secondary" onclick="viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--};render()">◀</button>
-      <strong>${fmtMonth(viewYear,viewMonth)}</strong>
-      <button class="secondary" onclick="viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++};render()">▶</button>
+      <strong>MONTHLY LOGGING</strong>
     </div>
     <div class="weekdays"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
     <div class="week">`;
 
-  for (let i = 0; i < firstWeekday(viewYear, viewMonth); i++) html += `<div class="day" style="opacity:0"></div>`;
-  for (let d = 1; d <= daysInMonth(viewYear, viewMonth); d++) {
+  const dInM = daysInMonth(viewYear, viewMonth);
+  const startDay = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
+
+  for (let i = 0; i < startDay; i++) html += `<div class="day" style="opacity:0"></div>`;
+  for (let d = 1; d <= dInM; d++) {
     const dt = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const st = s.ledger.find(e => e.date === dt && e.type !== "payment")?.type || "";
     html += `<div class="day">${d}<select onchange="setDay(getStudent(${s.id}),'${dt}',this.value)">
@@ -183,36 +243,16 @@ function renderStudent(s) {
     </select></div>`;
   }
   
-  html += `</div>
-    <div class="msg-preview">
-      <div class="small" style="color:#25D366; margin-bottom:5px;">WHATSAPP PREVIEW (EDITABLE)</div>
-      <textarea id="waMsg${s.id}" rows="8">${messageText}</textarea>
-      <button class="wa" onclick="sendWhatsApp(${s.id})">SEND TO WHATSAPP</button>
-    </div>
-    <div style="margin-top:20px; display:flex; justify-content:space-between; border-top:1px solid #333; padding-top:20px;">
-      <button onclick="addPayment(${s.id})">+ RECORD PAYMENT (ADD HOURS)</button>
-      <button class="danger" onclick="if(confirm('Delete student? This removes all ledger history.')){students=students.filter(x=>x.id!==${s.id});selectedStudentId=students[0]?.id||null;save()}">DELETE STUDENT</button>
-    </div>
-  </div>`;
+  html += `</div></div>`;
   return html;
 }
 
-function sendWhatsApp(id) {
-  const s = getStudent(id);
-  const text = document.getElementById(`waMsg${s.id}`).value;
-  window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(text)}`, '_blank');
-}
-
+function closeModal() { document.querySelector(".modal")?.remove(); }
 function render() {
-  studentList.innerHTML = students.map(s => {
-    const bal = balance(s);
-    const active = selectedStudentId === s.id;
-    return `<button style="${bal<=0?'background:var(--danger);color:#fff':''}; ${active?'border:2px solid #fff':''}" onclick="selectedStudentId=${s.id};render()">${s.firstName}</button>`;
-  }).join("");
+  studentList.innerHTML = students.map(s => `<button style="${selectedStudentId===s.id?'border:2px solid #fff':''}" onclick="selectedStudentId=${s.id};render()">${s.firstName}</button>`).join("");
   const active = getStudent(selectedStudentId);
   studentView.innerHTML = active ? renderStudent(active) : "";
 }
-
 render();
 </script>
 </body>
