@@ -4,45 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prez AtoZ ENGLISH – Pro Logistics</title>
-
 <style>
   :root { --gold: #d4af37; --bg: #0b0b0b; --card-bg: #141414; --text: #f5f5f5; --danger: #cc0000; --wa: #25D366; }
   body { margin:0; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
   header { padding: 18px 28px; border-bottom: 1px solid #2a2a2a; background: #000; }
   header h1 { margin:0; font-size: 22px; color: var(--gold); letter-spacing: 1px; }
   header .sub { font-size: 11px; color: #888; text-transform: uppercase; margin-top: 4px; }
-
   main { padding: 20px; max-width: 1300px; margin: auto; }
   button { padding: 10px 16px; background: var(--gold); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
   button.secondary { background: #333; color: #fff; }
   button.danger { background: #550000; color: #fff; }
   button.wa { background: var(--wa); color: #fff; width: 100%; margin-top: 10px; }
-
   .card { background: var(--card-bg); border: 1px solid #2a2a2a; border-radius: 8px; padding: 20px; margin-top: 16px; }
   .balance.pos { color: #5aff8c; font-weight: bold; }
   .balance.neg { color: #ff5a5a; font-weight: bold; }
-
   .student-list { margin-top: 15px; }
   .student-list button { margin-right: 8px; margin-bottom: 8px; border: 1px solid #333; }
-  
   .calendar-header { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
   .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 12px; color: #888; text-align: center; }
   .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
-
   .day { border: 1px solid #2a2a2a; padding: 8px; min-height: 50px; font-size: 12px; background: #080808; }
   .day select { width: 100%; margin-top: 5px; background: #000; color: #fff; border: 1px solid #333; font-size: 10px; }
-
-  /* MESSAGE PREVIEW BOX (Chicken Business Style) */
   .msg-preview { background: #000; border: 1px solid #444; border-left: 4px solid var(--wa); padding: 15px; border-radius: 6px; margin-top: 20px; }
   .msg-preview textarea { width: 100%; background: transparent; border: none; color: #25D366; font-family: monospace; font-size: 14px; resize: none; outline: none; }
-
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
   .sheet { background: #1a1a1a; padding: 25px; border-radius: 8px; width: 400px; border: 1px solid var(--gold); max-height: 90vh; overflow-y: auto; }
   .sheet input, .sheet select { width: 100%; padding: 10px; margin: 8px 0; background: #000; color: #fff; border: 1px solid #333; box-sizing: border-box; }
   .small { font-size: 11px; color: #888; display: block; margin-top: 10px; text-transform: uppercase; font-weight: bold; }
 </style>
 </head>
-
 <body>
 
 <header>
@@ -76,7 +66,7 @@ function fmtMonth(y, m) {
   return `${names[m]} ${y}`;
 }
 
-// EDIT STUDENT / ADD STUDENT MODAL[cite: 1]
+// PROFILE EDITING (CORE RULE 2: NO FINANCIAL IMPACT)[cite: 1]
 function openStudentModal(id = null) {
   const s = id ? getStudent(id) : null;
   const m = document.createElement("div");
@@ -84,38 +74,27 @@ function openStudentModal(id = null) {
   m.innerHTML = `
     <div class="sheet">
       <h3>${s ? 'Edit Student Profile' : 'Add New Student'}</h3>
-      <label class="small">First & Last Name</label>
+      <label class="small">Full Name</label>
       <div style="display:flex; gap:10px;">
-        <input id="fn" placeholder="First" value="${s ? s.firstName : ''}">
-        <input id="ln" placeholder="Last" value="${s ? s.lastName : ''}">
+        <input id="fn" placeholder="First Name" value="${s ? s.firstName : ''}">
+        <input id="ln" placeholder="Last Name" value="${s ? s.lastName : ''}">
       </div>
-      <label class="small">WhatsApp Phone (Include Country Code)</label>
-      <input id="ph" placeholder="e.g. 521..." value="${s ? (s.phone || '') : ''}">
-      
+      <label class="small">WhatsApp Phone</label>
+      <input id="ph" placeholder="521..." value="${s ? (s.phone || '') : ''}">
       <label class="small">Level</label>
       <select id="cefr">
         ${['A1','A2','B1','B2','C1','C2'].map(l => `<option value="${l}" ${s && s.level === l ? 'selected' : ''}>${l}</option>`).join('')}
       </select>
-
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <div>
-          <label class="small">Hours Per Class</label>
-          <input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}">
-        </div>
-        <div>
-          <label class="small">Classes Per Week</label>
-          <input id="cpw" type="number" value="${s ? s.classesPerWeek : 3}">
-        </div>
+        <div><label class="small">Hrs Per Class</label><input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}"></div>
+        <div><label class="small">Classes/Week</label><input id="cpw" type="number" value="${s ? s.classesPerWeek : 3}"></div>
       </div>
-
-      <label class="small">Subscription Price ($)</label>
+      <label class="small">Subscription Price ($ reference only)</label>
       <input id="subPrice" type="number" value="${s ? s.subscriptionAmount : 210}">
-
-      <label class="small">Current Due Date</label>
+      <label class="small">Due Date (billing cycle reference)</label>
       <input id="dd" type="date" value="${s ? (s.dueDate || '') : ''}">
-      
       <div style="margin-top:20px; display:flex; gap:10px;">
-        <button style="flex:1" onclick="saveStudent(${id})">SAVE CHANGES</button>
+        <button style="flex:1" onclick="saveStudent(${id})">SAVE PROFILE</button>
         <button style="flex:1" class="secondary" onclick="closeModal()">CANCEL</button>
       </div>
     </div>`;
@@ -126,34 +105,29 @@ function closeModal() { document.querySelector(".modal")?.remove(); }
 
 function saveStudent(id) {
   const data = {
-    firstName: fn.value,
-    lastName: ln.value,
-    phone: ph.value,
-    level: cefr.value,
-    hoursPerClass: parseFloat(hpc.value),
-    classesPerWeek: parseInt(cpw.value),
-    subscriptionAmount: parseFloat(subPrice.value),
-    dueDate: dd.value
+    firstName: fn.value, lastName: ln.value, phone: ph.value, level: cefr.value,
+    hoursPerClass: parseFloat(hpc.value), classesPerWeek: parseInt(cpw.value),
+    subscriptionAmount: parseFloat(subPrice.value), dueDate: dd.value
   };
-
-  if (id) {
-    Object.assign(getStudent(id), data);
-  } else {
-    const n = { id: Date.now(), ...data, ledger: [] };
-    students.push(n);
-    selectedStudentId = n.id;
-  }
+  if (id) { Object.assign(getStudent(id), data); } 
+  else { const n = { id: Date.now(), ...data, ledger: [] }; students.push(n); selectedStudentId = n.id; }
   closeModal(); save();
 }
 
-// MANUALLY RECORD PAYMENT (4-WEEK LOGIC)[cite: 1]
+// PAY IN ACTION (CORE RULE 3 & 4: THE ONLY WAY TO ADD HOURS)[cite: 1]
 function addPayment(id) {
   const s = getStudent(id);
-  const cycleHours = s.classesPerWeek * 4;
-  const h = parseFloat(prompt(`Adding 4-week cycle (${cycleHours} hours). Or enter custom amount:`, cycleHours));
-  if (h > 0) { 
-    s.ledger.push({ id: Date.now(), date: new Date().toISOString().slice(0, 10), type: "payment", hours: h }); 
-    save(); 
+  const suggestedHrs = s.classesPerWeek * 4;
+  const h = parseFloat(prompt(`Enter hours to add (Payment for ${s.firstName}):`, suggestedHrs));
+  if (!isNaN(h) && h > 0) {
+    s.ledger.push({ 
+      id: Date.now(), 
+      date: new Date().toISOString().slice(0, 10), 
+      type: "payment", 
+      hours: h,
+      priceAtTime: s.subscriptionAmount 
+    });
+    save();
   }
 }
 
@@ -168,10 +142,8 @@ function setDay(s, date, type) {
 function renderStudent(s) {
   const bal = balance(s);
   const lessons = Math.floor(bal / s.hoursPerClass);
-  const isLow = bal <= 5;
   const nextPurchaseHours = s.classesPerWeek * 4;
 
-  // CHICKEN BUSINESS STYLE MESSAGE GENERATOR[cite: 1]
   const messageText = `STUDENT UPDATE: ${s.firstName} ${s.lastName}\n` +
                       `---------------------------\n` +
                       `Level: ${s.level}\n` +
@@ -179,7 +151,7 @@ function renderStudent(s) {
                       `Approx. Lessons: ${lessons}\n` +
                       `Due Date: ${s.dueDate || 'N/A'}\n` +
                       `---------------------------\n` +
-                      `Next Purchase: ${nextPurchaseHours} Hours ($${s.subscriptionAmount})`;
+                      `Next Cycle: ${nextPurchaseHours} Hours ($${s.subscriptionAmount})`;
 
   let html = `
   <div class="card">
@@ -187,23 +159,19 @@ function renderStudent(s) {
         <h2 style="margin:0; color:var(--gold);">${s.firstName.toUpperCase()} ${s.lastName.toUpperCase()}</h2>
         <button class="secondary" onclick="openStudentModal(${s.id})">EDIT PROFILE</button>
     </div>
-    
     <div style="display:flex; gap:30px; margin: 15px 0;">
-        <div><div class="small">Current Balance</div><div class="balance ${bal<=0?'neg':'pos'}">${bal.toFixed(1)} hrs</div></div>
-        <div><div class="small">Subscription</div><div>$${s.subscriptionAmount} / ${nextPurchaseHours}h</div></div>
-        <div><div class="small">Classes/Week</div><div>${s.classesPerWeek}x</div></div>
-        <div><div class="small">Due Date</div><div style="${isLow?'color:orange':''}">${s.dueDate || 'Not Set'}</div></div>
+        <div><div class="small">Balance</div><div class="balance ${bal<=0?'neg':'pos'}">${bal.toFixed(1)} hrs</div></div>
+        <div><div class="small">Price Reference</div><div>$${s.subscriptionAmount}</div></div>
+        <div><div class="small">Schedule</div><div>${s.classesPerWeek}x / week</div></div>
+        <div><div class="small">Due Date</div><div>${s.dueDate || 'Not Set'}</div></div>
     </div>
-
     <div class="calendar-header">
       <button class="secondary" onclick="viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--};render()">◀</button>
       <strong>${fmtMonth(viewYear,viewMonth)}</strong>
       <button class="secondary" onclick="viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++};render()">▶</button>
     </div>
-
     <div class="weekdays"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
-    <div class="week">
-  `;
+    <div class="week">`;
 
   for (let i = 0; i < firstWeekday(viewYear, viewMonth); i++) html += `<div class="day" style="opacity:0"></div>`;
   for (let d = 1; d <= daysInMonth(viewYear, viewMonth); d++) {
@@ -216,17 +184,14 @@ function renderStudent(s) {
   }
   
   html += `</div>
-
-    <!-- MESSAGE PREVIEW SECTION[cite: 1] -->
     <div class="msg-preview">
-      <div class="small" style="color:#25D366; margin-bottom:5px;">PRE-MESSAGE PREVIEW</div>
+      <div class="small" style="color:#25D366; margin-bottom:5px;">WHATSAPP PREVIEW (EDITABLE)</div>
       <textarea id="waMsg${s.id}" rows="8">${messageText}</textarea>
-      <button class="wa" onclick="sendWhatsApp(${s.id})">SEND THIS TO WHATSAPP</button>
+      <button class="wa" onclick="sendWhatsApp(${s.id})">SEND TO WHATSAPP</button>
     </div>
-
     <div style="margin-top:20px; display:flex; justify-content:space-between; border-top:1px solid #333; padding-top:20px;">
-      <button onclick="addPayment(${s.id})">+ RECORD PAYMENT</button>
-      <button class="danger" onclick="if(confirm('Delete student?')){students=students.filter(x=>x.id!==${s.id});selectedStudentId=students[0]?.id||null;save()}">DELETE STUDENT</button>
+      <button onclick="addPayment(${s.id})">+ RECORD PAYMENT (ADD HOURS)</button>
+      <button class="danger" onclick="if(confirm('Delete student? This removes all ledger history.')){students=students.filter(x=>x.id!==${s.id});selectedStudentId=students[0]?.id||null;save()}">DELETE STUDENT</button>
     </div>
   </div>`;
   return html;
@@ -235,8 +200,7 @@ function renderStudent(s) {
 function sendWhatsApp(id) {
   const s = getStudent(id);
   const text = document.getElementById(`waMsg${s.id}`).value;
-  const url = `https://wa.me/${s.phone}?text=${encodeURIComponent(text)}`;
-  window.open(url, '_blank');
+  window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(text)}`, '_blank');
 }
 
 function render() {
