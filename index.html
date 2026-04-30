@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prez AtoZ ENGLISH – Professional</title>
+<style>
+  :root { --gold: #d4af37; --bg: #0b0b0b; --card-bg: #141414; --text: #f5f5f5; --danger: #cc0000; --success: #25D366; }
+  body { margin:0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
+  header { padding:20px; border-bottom: 3px solid var(--gold); background: #000; text-align: center; }
+  header h1 { margin:0; color: var(--gold); font-weight: 900; letter-spacing: 2px; }
+  main { padding:20px; max-width:1100px; margin:auto; }
+
+  /* LOYALTY BADGE */
+  .loyalty-badge { background: linear-gradient(45deg, #d4af37, #b8860b); color: #000; padding: 5px 12px; border-radius: 20px; font-weight: 900; font-size: 12px; margin-left: 10px; display: inline-block; vertical-align: middle; }
+
+  /* ROSTER */
+  .roster-box { background: #111; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+  .tab-btn { padding: 12px 20px; background: #222; color: #fff; border: 2px solid #444; border-radius: 6px; cursor: pointer; font-weight: 900; text-transform: uppercase; }
+  .tab-btn.active { background: var(--gold); color: #000; border-color: #fff; }
+
+  /* WORKSPACE */
+  .card { background: var(--card-bg); border: 1px solid #2a2a2a; border-radius: 15px; padding: 25px; margin-bottom: 25px; }
+  .stat-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 900; }
+  .stat-val { font-size: 18px; font-weight: 700; color: #fff; }
+
+  /* TABLE */
+  .table-container { overflow-x: auto; margin-top: 15px; }
+  table { width: 100%; border-collapse: collapse; background: #080808; border-radius: 8px; }
+  th { text-align: left; color: var(--gold); padding: 12px; border-bottom: 2px solid #222; font-size: 11px; text-transform: uppercase; }
+  td { padding: 12px; border-bottom: 1px solid #1a1a1a; font-size: 14px; }
+  .del-btn { color: #555; cursor: pointer; font-weight: 900; border: none; background: none; }
+
+  /* MODALS */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .sheet { background: #1a1a1a; padding: 30px; border-radius: 15px; border: 2px solid var(--gold); width: 90%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .sheet label { font-size: 12px; font-weight: 900; color: var(--gold); display: block; margin-top: 15px; text-transform: uppercase; }
+  .sheet input, .sheet select, .sheet textarea { width: 100%; padding: 12px; margin: 5px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+  .calc-helper { background: #222; padding: 10px; border-radius: 6px; font-size: 13px; color: #aaa; margin-top: 10px; border-left: 4px solid var(--gold); }
+</style>
+</head>
+<body>
+
+<header><h1>PREZ AtoZ ENGLISH</h1></header>
+
+<main>
+  <section class="roster-box">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0; color:var(--gold); font-weight: 900;">STUDENT ROSTER</h3>
+      <button onclick="openStudentModal()" style="background:var(--gold); font-weight:900; padding:8px 15px; border:none; border-radius:4px; cursor:pointer;">+ ADD STUDENT</button>
+    </div>
+    <div id="tabsList" class="tabs"></div>
+  </section>
+
+  <div id="activeWorkspace"></div>
+
+  <div style="text-align:center; padding:20px; border-top:1px solid #222; margin-top:20px;">
+    <button onclick="exportData()" style="background:#222; color:#888; border:1px solid #444; padding:10px; border-radius:5px; cursor:pointer; font-size:11px;">💾 DOWNLOAD BACKUP</button>
+    <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+    <button onclick="document.getElementById('importFile').click()" style="background:#222; color:#888; border:1px solid #444; padding:10px; border-radius:5px; cursor:pointer; font-size:11px; margin-left:10px;">📂 RESTORE FROM FILE</button>
+  </div>
+</main>
+
+<div id="studentModal" class="modal"><div class="sheet" id="studentSheet"></div></div>
+<div id="paymentModal" class="modal"><div class="sheet" id="paymentSheet"></div></div>
+
+<script>
+let students = JSON.parse(localStorage.getItem("prez_pro_data") || "[]");
+let activeId = localStorage.getItem("prez_pro_active") ? parseInt(localStorage.getItem("prez_pro_active")) : (students[0]?.id || null);
+
+function save() { 
+  localStorage.setItem("prez_pro_data", JSON.stringify(students)); 
+  localStorage.setItem("prez_pro_active", activeId);
+  render(); 
+}
+
+function getS(id) { return students.find(s => s.id === id); }
+function getBal(id) { 
+  const s = getS(id);
+  return s.ledger.reduce((a, b) => a + (b.hours || 0), 0); 
+}
+
+function getLoyalty(startDate) {
+  if (!startDate) return "";
+  const start = new Date(startDate);
+  const now = new Date();
+  let years = now.getFullYear() - start.getFullYear();
+  let months = now.getMonth() - start.getMonth();
+  if (months < 0) { years--; months += 12; }
+  return years > 0 ? `${years}y ${months}m` : `${months}m`;
+}
+
+function render() {
+  document.getElementById("tabsList").innerHTML = students.map(s => `
+    <button class="tab-btn ${activeId === s.id ? 'active' : ''}" onclick="activeId=${s.id}; save();">${s.firstName}</button>
+  `).join("");
+
+  const s = getS(activeId);
+  if (!s) { document.getElementById("activeWorkspace").innerHTML = "<p>Add a student to begin.</p>"; return; }
+
+  const bal = getBal(s.id);
+  const loyalty = getLoyalty(s.startDate);
+
+  document.getElementById("activeWorkspace").innerHTML = `
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <div>
+          <h2 style="margin:0; font-size:32px; font-weight:900; color:var(--gold); display:inline-block;">${s.firstName.toUpperCase()} ${s.lastName.toUpperCase()}</h2>
+          ${loyalty ? `<span class="loyalty-badge">Student for ${loyalty}</span>` : ''}
+          <div style="display:flex; gap:25px; margin-top:15px;">
+            <div><div class="stat-label">Hours Left</div><div class="stat-val" style="color:#5aff8c">${bal.toFixed(1)}</div></div>
+            <div><div class="stat-label">Duration</div><div class="stat-val">${s.hpc} hrs</div></div>
+            <div><div class="stat-label">Frequency</div><div class="stat-val">${s.freq}x / week</div></div>
+            <div><div class="stat-label">Plan Price</div><div class="stat-val">$${s.subPrice}</div></div>
+          </div>
+        </div>
+        <button style="background:#333; color:#fff; font-weight:900; padding:10px 15px; border:none; border-radius:5px; cursor:pointer;" onclick="openStudentModal(${s.id})">EDIT PROFILE</button>
+      </div>
+      <button onclick="openPaymentModal(${s.id})" style="width:100%; background:var(--gold); font-weight:900; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px; margin-top:25px;">+ RECORD PAYMENT / CREDIT</button>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0; color:var(--gold); font-size:14px;">PAYMENT HISTORY</h3>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Date</th><th>Paid</th><th>Hours</th><th>Notes</th><th></th></tr></thead>
+          <tbody>
+            ${s.ledger.filter(e => e.type === 'payment').reverse().map(p => `
+              <tr>
+                <td>${p.date}</td>
+                <td style="color:#5aff8c">$${p.amount}</td>
+                <td style="font-weight:900; color:var(--gold)">+${p.hours}</td>
+                <td style="font-style:italic; color:#888;">${p.note || '--'}</td>
+                <td><button class="del-btn" onclick="deleteEntry(${s.id}, ${p.id})">✕</button></td>
+              </tr>
+            `).join("") || "<tr><td colspan='5' style='text-align:center;'>No payments yet.</td></tr>"}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function openStudentModal(id = null) {
+  const s = id ? getS(id) : null;
+  document.getElementById('studentSheet').innerHTML = `
+    <h2 style="color:var(--gold); margin:0;">STUDENT PROFILE</h2>
+    <label>Student Name</label>
+    <div style="display:flex; gap:10px;"><input id="fN" placeholder="First" value="${s?s.firstName:''}"> <input id="lN" placeholder="Last" value="${s?s.lastName:''}"></div>
+    
+    <label>Student Since (Start Date)</label>
+    <input id="sDate" type="date" value="${s?s.startDate:''}">
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+      <div>
+        <label>Duration of Class</label>
+        <input id="hr" type="number" step="0.5" value="${s?s.hpc:1.5}" oninput="calcSub()">
+      </div>
+      <div>
+        <label>Classes per Week</label>
+        <input id="fq" type="number" value="${s?s.freq:2}" oninput="calcSub()">
+      </div>
+    </div>
+
+    <div id="calcHelper" class="calc-helper">Monthly Load: 0 hours</div>
+
+    <label>Custom Subscription Price ($)</label>
+    <input id="subP" type="number" value="${s?s.subPrice:''}">
+
+    <button onclick="saveStudent(${id})" style="background:var(--gold); color:#000; font-weight:900; width:100%; padding:15px; border:none; border-radius:8px; margin-top:20px; cursor:pointer;">SAVE STUDENT</button>
+    <button onclick="closeModal('studentModal')" style="width:100%; background:none; border:none; color:#888; margin-top:10px; cursor:pointer;">CANCEL</button>
+  `;
+  document.getElementById('studentModal').style.display = "flex";
+  calcSub();
+}
+
+function calcSub() {
+  const h = parseFloat(document.getElementById('hr').value) || 0;
+  const f = parseInt(document.getElementById('fq').value) || 0;
+  document.getElementById('calcHelper').innerText = `Monthly Load: ${(h * f * 4).toFixed(1)} hours total.`;
+}
+
+function saveStudent(id) {
+  const data = {
+    firstName: document.getElementById('fN').value,
+    lastName: document.getElementById('lN').value,
+    startDate: document.getElementById('sDate').value,
+    hpc: parseFloat(document.getElementById('hr').value || 1.5),
+    freq: parseInt(document.getElementById('fq').value || 2),
+    subPrice: document.getElementById('subP').value || 0,
+    ledger: id ? getS(id).ledger : []
+  };
+  if (id) Object.assign(getS(id), data);
+  else { const n = { id: Date.now(), ...data }; students.push(n); activeId = n.id; }
+  closeModal('studentModal'); save();
+}
+
+function openPaymentModal(id) {
+  const s = getS(id);
+  document.getElementById('paymentSheet').innerHTML = `
+    <h2 style="color:var(--gold); margin:0;">RECORD PAYMENT</h2>
+    <label>Payment Date</label>
+    <input id="pDate" type="date" value="${new Date().toISOString().slice(0,10)}">
+    <label>Amount Paid ($)</label>
+    <input id="pAmt" type="number" value="${s.subPrice}">
+    <label>Hours to Add</label>
+    <input id="pHrs" type="number" step="0.5" value="${s.hpc * s.freq * 4}">
+    <label>Notes</label>
+    <textarea id="pNote"></textarea>
+    <button onclick="savePayment(${id})" style="background:var(--gold); color:#000; font-weight:900; width:100%; padding:15px; border:none; border-radius:8px; margin-top:15px; cursor:pointer;">APPLY PAYMENT</button>
+    <button onclick="closeModal('paymentModal')" style="width:100%; background:none; color:#888; margin-top:10px; cursor:pointer;">CANCEL</button>
+  `;
+  document.getElementById('paymentModal').style.display = "flex";
+}
+
+function savePayment(id) {
+  getS(id).ledger.push({ id: Date.now(), date: document.getElementById('pDate').value, type: 'payment', amount: document.getElementById('pAmt').value, hours: parseFloat(document.getElementById('pHrs').value), note: document.getElementById('pNote').value });
+  closeModal('paymentModal'); save();
+}
+
+function deleteEntry(sId, eId) {
+  if (confirm("Delete this record?")) { getS(sId).ledger = getS(sId).ledger.filter(e => e.id !== eId); save(); }
+}
+
+function closeModal(id) { document.getElementById(id).style.display = "none"; }
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(students)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `PrezAtoZ_Backup.json`;
+  a.click();
+}
+
+function importData(event) {
+  const reader = new FileReader();
+  reader.onload = (e) => { students = JSON.parse(e.target.result); activeId = students[0]?.id || null; save(); };
+  reader.readAsText(event.target.files[0]);
+}
+
+render();
+</script>
+</body>
+</html>
