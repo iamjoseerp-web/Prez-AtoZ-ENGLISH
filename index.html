@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prez AtoZ ENGLISH – Student Pro</title>
+<title>Prez AtoZ ENGLISH – Pro Logistics</title>
 
 <style>
   :root { --gold: #d4af37; --bg: #0b0b0b; --card-bg: #141414; --text: #f5f5f5; --danger: #cc0000; --wa: #25D366; }
-  body { margin:0; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); }
+  body { margin:0; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
   header { padding: 18px 28px; border-bottom: 1px solid #2a2a2a; background: #000; }
   header h1 { margin:0; font-size: 22px; color: var(--gold); letter-spacing: 1px; }
   header .sub { font-size: 11px; color: #888; text-transform: uppercase; margin-top: 4px; }
@@ -16,7 +16,7 @@
   button { padding: 10px 16px; background: var(--gold); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
   button.secondary { background: #333; color: #fff; }
   button.danger { background: #550000; color: #fff; }
-  button.wa { background: var(--wa); color: #fff; }
+  button.wa { background: var(--wa); color: #fff; width: 100%; margin-top: 10px; }
 
   .card { background: var(--card-bg); border: 1px solid #2a2a2a; border-radius: 8px; padding: 20px; margin-top: 16px; }
   .balance.pos { color: #5aff8c; font-weight: bold; }
@@ -32,8 +32,12 @@
   .day { border: 1px solid #2a2a2a; padding: 8px; min-height: 50px; font-size: 12px; background: #080808; }
   .day select { width: 100%; margin-top: 5px; background: #000; color: #fff; border: 1px solid #333; font-size: 10px; }
 
+  /* MESSAGE PREVIEW BOX (Chicken Business Style) */
+  .msg-preview { background: #000; border: 1px solid #444; border-left: 4px solid var(--wa); padding: 15px; border-radius: 6px; margin-top: 20px; }
+  .msg-preview textarea { width: 100%; background: transparent; border: none; color: #25D366; font-family: monospace; font-size: 14px; resize: none; outline: none; }
+
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .sheet { background: #1a1a1a; padding: 25px; border-radius: 8px; width: 380px; border: 1px solid var(--gold); }
+  .sheet { background: #1a1a1a; padding: 25px; border-radius: 8px; width: 400px; border: 1px solid var(--gold); max-height: 90vh; overflow-y: auto; }
   .sheet input, .sheet select { width: 100%; padding: 10px; margin: 8px 0; background: #000; color: #fff; border: 1px solid #333; box-sizing: border-box; }
   .small { font-size: 11px; color: #888; display: block; margin-top: 10px; text-transform: uppercase; font-weight: bold; }
 </style>
@@ -43,7 +47,7 @@
 
 <header>
   <h1>PREZ AtoZ ENGLISH</h1>
-  <div class="sub">Logistics & Student Management System</div>
+  <div class="sub">Logistics & Student Hours Tracking</div>
 </header>
 
 <main>
@@ -53,7 +57,6 @@
 </main>
 
 <script>
-// STORAGE & GLOBAL STATE[cite: 1]
 let students = JSON.parse(localStorage.getItem("students")||"[]");
 let selectedStudentId = students[0]?.id || null;
 let viewMonth = new Date().getMonth();
@@ -73,33 +76,46 @@ function fmtMonth(y, m) {
   return `${names[m]} ${y}`;
 }
 
-// 2. STUDENT RECORD EDITABILITY[cite: 1]
+// EDIT STUDENT / ADD STUDENT MODAL[cite: 1]
 function openStudentModal(id = null) {
   const s = id ? getStudent(id) : null;
   const m = document.createElement("div");
   m.className = "modal";
   m.innerHTML = `
     <div class="sheet">
-      <h3>${s ? 'Edit Student' : 'Add New Student'}</h3>
-      <input id="fn" placeholder="First Name" value="${s ? s.firstName : ''}">
-      <input id="ln" placeholder="Last Name" value="${s ? s.lastName : ''}">
-      <input id="ph" placeholder="WhatsApp Phone (e.g. 521...)" value="${s ? (s.phone || '') : ''}">
+      <h3>${s ? 'Edit Student Profile' : 'Add New Student'}</h3>
+      <label class="small">First & Last Name</label>
+      <div style="display:flex; gap:10px;">
+        <input id="fn" placeholder="First" value="${s ? s.firstName : ''}">
+        <input id="ln" placeholder="Last" value="${s ? s.lastName : ''}">
+      </div>
+      <label class="small">WhatsApp Phone (Include Country Code)</label>
+      <input id="ph" placeholder="e.g. 521..." value="${s ? (s.phone || '') : ''}">
       
       <label class="small">Level</label>
       <select id="cefr">
         ${['A1','A2','B1','B2','C1','C2'].map(l => `<option value="${l}" ${s && s.level === l ? 'selected' : ''}>${l}</option>`).join('')}
       </select>
 
-      <label class="small">Hours per class</label>
-      <select id="hpc">
-        ${[1, 1.5, 2].map(h => `<option value="${h}" ${s && s.hoursPerClass === h ? 'selected' : ''}>${h}</option>`).join('')}
-      </select>
-      
-      <label class="small">Due Date (Package Expiry)</label>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div>
+          <label class="small">Hours Per Class</label>
+          <input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}">
+        </div>
+        <div>
+          <label class="small">Classes Per Week</label>
+          <input id="cpw" type="number" value="${s ? s.classesPerWeek : 3}">
+        </div>
+      </div>
+
+      <label class="small">Subscription Price ($)</label>
+      <input id="subPrice" type="number" value="${s ? s.subscriptionAmount : 210}">
+
+      <label class="small">Current Due Date</label>
       <input id="dd" type="date" value="${s ? (s.dueDate || '') : ''}">
       
       <div style="margin-top:20px; display:flex; gap:10px;">
-        <button style="flex:1" onclick="saveStudent(${id})">SAVE</button>
+        <button style="flex:1" onclick="saveStudent(${id})">SAVE CHANGES</button>
         <button style="flex:1" class="secondary" onclick="closeModal()">CANCEL</button>
       </div>
     </div>`;
@@ -115,31 +131,32 @@ function saveStudent(id) {
     phone: ph.value,
     level: cefr.value,
     hoursPerClass: parseFloat(hpc.value),
+    classesPerWeek: parseInt(cpw.value),
+    subscriptionAmount: parseFloat(subPrice.value),
     dueDate: dd.value
   };
 
   if (id) {
     Object.assign(getStudent(id), data);
   } else {
-    const n = { id: Date.now(), ...data, ledger: [], classesPerWeek: 2, subscriptionAmount: 0 };
+    const n = { id: Date.now(), ...data, ledger: [] };
     students.push(n);
     selectedStudentId = n.id;
   }
   closeModal(); save();
 }
 
-// 3. WHATSAPP INTEGRATION[cite: 1]
-function sendWhatsApp(id) {
+// MANUALLY RECORD PAYMENT (4-WEEK LOGIC)[cite: 1]
+function addPayment(id) {
   const s = getStudent(id);
-  const bal = balance(s);
-  const lessons = Math.floor(bal / s.hoursPerClass);
-  const text = `Hi ${s.firstName}, this is a reminder from Prez AtoZ ENGLISH. You have ${bal.toFixed(1)} hours (${lessons} lessons) remaining. Your current package due date is ${s.dueDate || 'N/A'}. Please note that a payment will be due soon.`;
-  
-  const url = `https://wa.me/${s.phone}?text=${encodeURIComponent(text)}`;
-  window.open(url, '_blank');
+  const cycleHours = s.classesPerWeek * 4;
+  const h = parseFloat(prompt(`Adding 4-week cycle (${cycleHours} hours). Or enter custom amount:`, cycleHours));
+  if (h > 0) { 
+    s.ledger.push({ id: Date.now(), date: new Date().toISOString().slice(0, 10), type: "payment", hours: h }); 
+    save(); 
+  }
 }
 
-// CALENDAR & LOGGING LOGIC (LOCKED & PRESERVED)[cite: 1]
 function setDay(s, date, type) {
   s.ledger = s.ledger.filter(e => e.date !== date || e.type === "payment");
   if (!type) return save();
@@ -148,15 +165,21 @@ function setDay(s, date, type) {
   save();
 }
 
-function addPayment(s) {
-  const h = parseFloat(prompt("Enter hours to credit:"));
-  if (h > 0) { s.ledger.push({ id: Date.now(), date: new Date().toISOString().slice(0, 10), type: "payment", hours: h }); save(); }
-}
-
 function renderStudent(s) {
   const bal = balance(s);
   const lessons = Math.floor(bal / s.hoursPerClass);
-  const isLow = bal <= 5; // 4. AUTOMATED REMINDER TRIGGER[cite: 1]
+  const isLow = bal <= 5;
+  const nextPurchaseHours = s.classesPerWeek * 4;
+
+  // CHICKEN BUSINESS STYLE MESSAGE GENERATOR[cite: 1]
+  const messageText = `STUDENT UPDATE: ${s.firstName} ${s.lastName}\n` +
+                      `---------------------------\n` +
+                      `Level: ${s.level}\n` +
+                      `Hours Remaining: ${bal.toFixed(1)}\n` +
+                      `Approx. Lessons: ${lessons}\n` +
+                      `Due Date: ${s.dueDate || 'N/A'}\n` +
+                      `---------------------------\n` +
+                      `Next Purchase: ${nextPurchaseHours} Hours ($${s.subscriptionAmount})`;
 
   let html = `
   <div class="card">
@@ -166,15 +189,11 @@ function renderStudent(s) {
     </div>
     
     <div style="display:flex; gap:30px; margin: 15px 0;">
-        <div><div class="small">Balance</div><div class="balance ${bal<=0?'neg':'pos'}">${bal.toFixed(1)} hrs</div></div>
-        <div><div class="small">Lessons Left</div><div>${lessons}</div></div>
-        <div><div class="small">Level</div><div>${s.level}</div></div>
+        <div><div class="small">Current Balance</div><div class="balance ${bal<=0?'neg':'pos'}">${bal.toFixed(1)} hrs</div></div>
+        <div><div class="small">Subscription</div><div>$${s.subscriptionAmount} / ${nextPurchaseHours}h</div></div>
+        <div><div class="small">Classes/Week</div><div>${s.classesPerWeek}x</div></div>
         <div><div class="small">Due Date</div><div style="${isLow?'color:orange':''}">${s.dueDate || 'Not Set'}</div></div>
     </div>
-
-    ${isLow ? `<div style="background:#332200; padding:10px; border-radius:5px; margin-bottom:15px; font-size:13px; color:var(--gold);">⚠️ Student has ${bal.toFixed(1)} hours remaining. Reminder recommended.</div>` : ''}
-
-    <button class="wa" style="width:100%; margin-bottom:20px;" onclick="sendWhatsApp(${s.id})">SEND WHATSAPP REMINDER</button>
 
     <div class="calendar-header">
       <button class="secondary" onclick="viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--};render()">◀</button>
@@ -196,17 +215,35 @@ function renderStudent(s) {
     </select></div>`;
   }
   
-  html += `</div><div style="margin-top:20px; display:flex; justify-content:space-between;">
-    <button onclick="addPayment(getStudent(${s.id}))">+ ADD PAYMENT</button>
-    <button class="danger" onclick="if(confirm('Delete student?')){students=students.filter(x=>x.id!==${s.id});selectedStudentId=students[0]?.id||null;save()}">DELETE</button>
-  </div></div>`;
+  html += `</div>
+
+    <!-- MESSAGE PREVIEW SECTION[cite: 1] -->
+    <div class="msg-preview">
+      <div class="small" style="color:#25D366; margin-bottom:5px;">PRE-MESSAGE PREVIEW</div>
+      <textarea id="waMsg${s.id}" rows="8">${messageText}</textarea>
+      <button class="wa" onclick="sendWhatsApp(${s.id})">SEND THIS TO WHATSAPP</button>
+    </div>
+
+    <div style="margin-top:20px; display:flex; justify-content:space-between; border-top:1px solid #333; padding-top:20px;">
+      <button onclick="addPayment(${s.id})">+ RECORD PAYMENT</button>
+      <button class="danger" onclick="if(confirm('Delete student?')){students=students.filter(x=>x.id!==${s.id});selectedStudentId=students[0]?.id||null;save()}">DELETE STUDENT</button>
+    </div>
+  </div>`;
   return html;
+}
+
+function sendWhatsApp(id) {
+  const s = getStudent(id);
+  const text = document.getElementById(`waMsg${s.id}`).value;
+  const url = `https://wa.me/${s.phone}?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
 }
 
 function render() {
   studentList.innerHTML = students.map(s => {
     const bal = balance(s);
-    return `<button style="${bal<=0?'background:var(--danger);color:#fff':''}; ${selectedStudentId===s.id?'border:2px solid #fff':''}" onclick="selectedStudentId=${s.id};render()">${s.firstName}</button>`;
+    const active = selectedStudentId === s.id;
+    return `<button style="${bal<=0?'background:var(--danger);color:#fff':''}; ${active?'border:2px solid #fff':''}" onclick="selectedStudentId=${s.id};render()">${s.firstName}</button>`;
   }).join("");
   const active = getStudent(selectedStudentId);
   studentView.innerHTML = active ? renderStudent(active) : "";
