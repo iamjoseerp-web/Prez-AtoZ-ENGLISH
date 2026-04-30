@@ -3,40 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prez AtoZ ENGLISH – Student Hours Log</title>
+<title>Prez AtoZ ENGLISH – Student Pro</title>
 
 <style>
-  :root { --gold: #d4af37; --bg: #0b0b0b; --card-bg: #141414; --text: #f5f5f5; --danger: #cc0000; }
+  :root { --gold: #d4af37; --bg: #0b0b0b; --card-bg: #141414; --text: #f5f5f5; --danger: #cc0000; --wa: #25D366; }
   body { margin:0; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); }
   header { padding: 18px 28px; border-bottom: 1px solid #2a2a2a; background: #000; }
   header h1 { margin:0; font-size: 22px; color: var(--gold); letter-spacing: 1px; }
-  header .sub { font-size: 12px; color: #aaa; text-transform: uppercase; margin-top: 4px; }
+  header .sub { font-size: 11px; color: #888; text-transform: uppercase; margin-top: 4px; }
 
   main { padding: 20px; max-width: 1300px; margin: auto; }
-
   button { padding: 10px 16px; background: var(--gold); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
   button.secondary { background: #333; color: #fff; }
   button.danger { background: #550000; color: #fff; }
+  button.wa { background: var(--wa); color: #fff; }
 
   .card { background: var(--card-bg); border: 1px solid #2a2a2a; border-radius: 8px; padding: 20px; margin-top: 16px; }
-
   .balance.pos { color: #5aff8c; font-weight: bold; }
   .balance.neg { color: #ff5a5a; font-weight: bold; }
 
   .student-list { margin-top: 15px; }
   .student-list button { margin-right: 8px; margin-bottom: 8px; border: 1px solid #333; }
-
+  
   .calendar-header { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
-  .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 12px; color: #888; text-align: center; font-weight: bold; }
+  .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 12px; color: #888; text-align: center; }
   .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
 
-  .day { border: 1px solid #2a2a2a; padding: 8px; min-height: 60px; font-size: 13px; background: #080808; position: relative; }
-  .day select { width: 100%; margin-top: 10px; background: #000; color: #fff; border: 1px solid #333; border-radius: 3px; font-size: 11px; }
+  .day { border: 1px solid #2a2a2a; padding: 8px; min-height: 50px; font-size: 12px; background: #080808; }
+  .day select { width: 100%; margin-top: 5px; background: #000; color: #fff; border: 1px solid #333; font-size: 10px; }
 
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
   .sheet { background: #1a1a1a; padding: 25px; border-radius: 8px; width: 380px; border: 1px solid var(--gold); }
-  .sheet h3 { margin-top: 0; color: var(--gold); }
-  .sheet input, .sheet select { width: 100%; padding: 10px; margin: 8px 0; background: #000; color: #fff; border: 1px solid #333; border-radius: 4px; box-sizing: border-box; }
+  .sheet input, .sheet select { width: 100%; padding: 10px; margin: 8px 0; background: #000; color: #fff; border: 1px solid #333; box-sizing: border-box; }
   .small { font-size: 11px; color: #888; display: block; margin-top: 10px; text-transform: uppercase; font-weight: bold; }
 </style>
 </head>
@@ -45,17 +43,17 @@
 
 <header>
   <h1>PREZ AtoZ ENGLISH</h1>
-  <div class="sub">Professional Student Hours & Grade Management</div>
+  <div class="sub">Logistics & Student Management System</div>
 </header>
 
 <main>
-  <button onclick="openAddStudent()">+ ADD NEW STUDENT</button>
+  <button onclick="openStudentModal()">+ ADD NEW STUDENT</button>
   <div class="student-list" id="studentList"></div>
   <div id="studentView"></div>
 </main>
 
 <script>
-// Data Persistence[cite: 1]
+// STORAGE & GLOBAL STATE[cite: 1]
 let students = JSON.parse(localStorage.getItem("students")||"[]");
 let selectedStudentId = students[0]?.id || null;
 let viewMonth = new Date().getMonth();
@@ -67,49 +65,41 @@ function save() {
 }
 
 function getStudent(id) { return students.find(s => s.id === id); }
-function balance(s) { return s.ledger.reduce((a, e) => a + e.hours, 0); }
+function balance(s) { return s.ledger.reduce((a, e) => a + (e.hours || 0), 0); }
 function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
-function firstWeekday(y, m) { return (new Date(y, m, 1).getDay() + 6) % 7; } // Adjusted for Monday start
+function firstWeekday(y, m) { return (new Date(y, m, 1).getDay() + 6) % 7; }
 function fmtMonth(y, m) { 
   const names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   return `${names[m]} ${y}`;
 }
-function isoMonth(y, m) { return `${y}-${String(m + 1).padStart(2, '0')}`; }
 
-// Modal Controls[cite: 1]
-function openAddStudent() {
+// 2. STUDENT RECORD EDITABILITY[cite: 1]
+function openStudentModal(id = null) {
+  const s = id ? getStudent(id) : null;
   const m = document.createElement("div");
   m.className = "modal";
   m.innerHTML = `
     <div class="sheet">
-      <h3>Add New Student</h3>
-      <input id="fn" placeholder="First Name">
-      <input id="ln" placeholder="Last Name">
+      <h3>${s ? 'Edit Student' : 'Add New Student'}</h3>
+      <input id="fn" placeholder="First Name" value="${s ? s.firstName : ''}">
+      <input id="ln" placeholder="Last Name" value="${s ? s.lastName : ''}">
+      <input id="ph" placeholder="WhatsApp Phone (e.g. 521...)" value="${s ? (s.phone || '') : ''}">
       
-      <label class="small">CEFR Grade Level</label>
+      <label class="small">Level</label>
       <select id="cefr">
-        <option value="A1">A1 - Beginner</option>
-        <option value="A2">A2 - Elementary</option>
-        <option value="B1">B1 - Intermediate</option>
-        <option value="B2">B2 - Upper Intermediate</option>
-        <option value="C1">C1 - Advanced</option>
-        <option value="C2">C2 - Proficiency</option>
+        ${['A1','A2','B1','B2','C1','C2'].map(l => `<option value="${l}" ${s && s.level === l ? 'selected' : ''}>${l}</option>`).join('')}
       </select>
 
       <label class="small">Hours per class</label>
-      <select id="hpc"><option>1</option><option>1.5</option><option>2</option></select>
+      <select id="hpc">
+        ${[1, 1.5, 2].map(h => `<option value="${h}" ${s && s.hoursPerClass === h ? 'selected' : ''}>${h}</option>`).join('')}
+      </select>
       
-      <label class="small">Classes per week</label>
-      <select id="cpw"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
-      
-      <label class="small">Monthly Subscription Amount ($)</label>
-      <input id="amt" type="number" placeholder="0.00">
-      
-      <label class="small">Start Date</label>
-      <input id="sd" type="date" value="${new Date().toISOString().split('T')[0]}">
+      <label class="small">Due Date (Package Expiry)</label>
+      <input id="dd" type="date" value="${s ? (s.dueDate || '') : ''}">
       
       <div style="margin-top:20px; display:flex; gap:10px;">
-        <button style="flex:1" onclick="addStudent()">SAVE</button>
+        <button style="flex:1" onclick="saveStudent(${id})">SAVE</button>
         <button style="flex:1" class="secondary" onclick="closeModal()">CANCEL</button>
       </div>
     </div>`;
@@ -118,72 +108,77 @@ function openAddStudent() {
 
 function closeModal() { document.querySelector(".modal")?.remove(); }
 
-function addStudent() {
-  const newStudent = {
-    id: Date.now(),
+function saveStudent(id) {
+  const data = {
     firstName: fn.value,
     lastName: ln.value,
-    level: cefr.value, // Added CEFR tracking[cite: 1]
+    phone: ph.value,
+    level: cefr.value,
     hoursPerClass: parseFloat(hpc.value),
-    classesPerWeek: parseInt(cpw.value),
-    subscriptionAmount: parseFloat(amt.value || 0),
-    startDate: sd.value,
-    ledger: []
+    dueDate: dd.value
   };
-  students.push(newStudent);
-  selectedStudentId = newStudent.id;
-  closeModal();
-  save();
+
+  if (id) {
+    Object.assign(getStudent(id), data);
+  } else {
+    const n = { id: Date.now(), ...data, ledger: [], classesPerWeek: 2, subscriptionAmount: 0 };
+    students.push(n);
+    selectedStudentId = n.id;
+  }
+  closeModal(); save();
 }
 
-function addPayment(s) {
-  const hours = parseFloat(prompt("Enter hours to credit (e.g., 12.0):"));
-  if (isNaN(hours) || hours <= 0) return;
-  s.ledger.push({
-    id: Date.now(),
-    date: new Date().toISOString().slice(0, 10),
-    type: "payment",
-    hours: hours
-  });
-  save();
+// 3. WHATSAPP INTEGRATION[cite: 1]
+function sendWhatsApp(id) {
+  const s = getStudent(id);
+  const bal = balance(s);
+  const lessons = Math.floor(bal / s.hoursPerClass);
+  const text = `Hi ${s.firstName}, this is a reminder from Prez AtoZ ENGLISH. You have ${bal.toFixed(1)} hours (${lessons} lessons) remaining. Your current package due date is ${s.dueDate || 'N/A'}. Please note that a payment will be due soon.`;
+  
+  const url = `https://wa.me/${s.phone}?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
 }
 
-// Strictly deducts based on student profile settings[cite: 1]
+// CALENDAR & LOGGING LOGIC (LOCKED & PRESERVED)[cite: 1]
 function setDay(s, date, type) {
   s.ledger = s.ledger.filter(e => e.date !== date || e.type === "payment");
   if (!type) return save();
-  
-  let hrs = 0;
-  if (type === "attended" || type === "noshow") hrs = -s.hoursPerClass;
-  if (type === "double") hrs = -(s.hoursPerClass * 2);
-  
+  let hrs = (type === "attended" || type === "noshow") ? -s.hoursPerClass : (type === "double" ? -(s.hoursPerClass * 2) : 0);
   s.ledger.push({ date, type, hours: hrs });
   save();
 }
 
-function dayStatus(s, date) {
-  return s.ledger.find(e => e.date === date && e.type !== "payment")?.type || "";
+function addPayment(s) {
+  const h = parseFloat(prompt("Enter hours to credit:"));
+  if (h > 0) { s.ledger.push({ id: Date.now(), date: new Date().toISOString().slice(0, 10), type: "payment", hours: h }); save(); }
 }
 
 function renderStudent(s) {
   const bal = balance(s);
+  const lessons = Math.floor(bal / s.hoursPerClass);
+  const isLow = bal <= 5; // 4. AUTOMATED REMINDER TRIGGER[cite: 1]
+
   let html = `
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="margin:0; color:var(--gold); font-size:24px;">${s.firstName.toUpperCase()} ${s.lastName.toUpperCase()}</h2>
-        <span style="background:var(--gold); color:#000; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:14px;">LEVEL: ${s.level}</span>
+        <h2 style="margin:0; color:var(--gold);">${s.firstName.toUpperCase()} ${s.lastName.toUpperCase()}</h2>
+        <button class="secondary" onclick="openStudentModal(${s.id})">EDIT PROFILE</button>
     </div>
-    <hr style="border:0; border-top:1px solid #2a2a2a; margin:15px 0;">
     
-    <div style="display:flex; gap:30px; margin-bottom:20px;">
-        <div><div class="small">Current Balance</div><div class="balance ${bal<=0?'neg':'pos'}" style="font-size:20px;">${bal.toFixed(1)} hrs</div></div>
-        <div><div class="small">Class Duration</div><div style="font-size:20px;">${s.hoursPerClass} hrs</div></div>
-        <div><div class="small">Subscription</div><div style="font-size:20px;">$${s.subscriptionAmount}</div></div>
+    <div style="display:flex; gap:30px; margin: 15px 0;">
+        <div><div class="small">Balance</div><div class="balance ${bal<=0?'neg':'pos'}">${bal.toFixed(1)} hrs</div></div>
+        <div><div class="small">Lessons Left</div><div>${lessons}</div></div>
+        <div><div class="small">Level</div><div>${s.level}</div></div>
+        <div><div class="small">Due Date</div><div style="${isLow?'color:orange':''}">${s.dueDate || 'Not Set'}</div></div>
     </div>
+
+    ${isLow ? `<div style="background:#332200; padding:10px; border-radius:5px; margin-bottom:15px; font-size:13px; color:var(--gold);">⚠️ Student has ${bal.toFixed(1)} hours remaining. Reminder recommended.</div>` : ''}
+
+    <button class="wa" style="width:100%; margin-bottom:20px;" onclick="sendWhatsApp(${s.id})">SEND WHATSAPP REMINDER</button>
 
     <div class="calendar-header">
       <button class="secondary" onclick="viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--};render()">◀</button>
-      <strong style="font-size:18px; min-width:150px; text-align:center;">${fmtMonth(viewYear,viewMonth)}</strong>
+      <strong>${fmtMonth(viewYear,viewMonth)}</strong>
       <button class="secondary" onclick="viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++};render()">▶</button>
     </div>
 
@@ -191,52 +186,33 @@ function renderStudent(s) {
     <div class="week">
   `;
 
-  // Pad start of month
-  for (let i = 0; i < firstWeekday(viewYear, viewMonth); i++) html += `<div class="day" style="opacity:0.2"></div>`;
-  
-  // Render days[cite: 1]
+  for (let i = 0; i < firstWeekday(viewYear, viewMonth); i++) html += `<div class="day" style="opacity:0"></div>`;
   for (let d = 1; d <= daysInMonth(viewYear, viewMonth); d++) {
-    const date = `${isoMonth(viewYear, viewMonth)}-${String(d).padStart(2, '0')}`;
-    const st = dayStatus(s, date);
-    html += `
-      <div class="day">
-        <strong>${d}</strong>
-        <select onchange="setDay(getStudent(${s.id}), '${date}', this.value)">
-          <option value="" ${st===""?"selected":""}>—</option>
-          <option value="attended" ${st==="attended"?"selected":""}>Attended</option>
-          <option value="double" ${st==="double"?"selected":""}>Double</option>
-          <option value="noshow" ${st==="noshow"?"selected":""}>No-show</option>
-          <option value="vacation" ${st==="vacation"?"selected":""}>Vacation</option>
-          <option value="noclass" ${st==="noclass"?"selected":""}>No class</option>
-        </select>
-      </div>`;
+    const dt = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const st = s.ledger.find(e => e.date === dt && e.type !== "payment")?.type || "";
+    html += `<div class="day">${d}<select onchange="setDay(getStudent(${s.id}),'${dt}',this.value)">
+      <option value="">—</option>
+      ${['attended','double','noshow','vacation','noclass'].map(opt => `<option value="${opt}" ${st===opt?'selected':''}>${opt}</option>`).join('')}
+    </select></div>`;
   }
   
-  html += `</div><br>
-    <div style="display:flex; justify-content:space-between; margin-top:20px; border-top:1px solid #2a2a2a; padding-top:20px;">
-        <button onclick="addPayment(getStudent(${s.id}))">+ ADD PAYMENT / CREDIT</button>
-        <button class="danger" onclick="if(confirm('Permanently delete student records?')){students=students.filter(x=>x.id!==${s.id});selectedStudentId=students[0]?.id||null;save()}">DELETE STUDENT</button>
-    </div>
-  </div>`;
+  html += `</div><div style="margin-top:20px; display:flex; justify-content:space-between;">
+    <button onclick="addPayment(getStudent(${s.id}))">+ ADD PAYMENT</button>
+    <button class="danger" onclick="if(confirm('Delete student?')){students=students.filter(x=>x.id!==${s.id});selectedStudentId=students[0]?.id||null;save()}">DELETE</button>
+  </div></div>`;
   return html;
 }
 
 function render() {
-  // Alert system for zero or negative balances[cite: 1]
   studentList.innerHTML = students.map(s => {
     const bal = balance(s);
-    const lowBalStyle = bal <= 0 ? 'background:#cc0000; color:white; border-color:#ff0000;' : '';
-    const activeStyle = selectedStudentId === s.id ? 'border: 2px solid var(--gold); transform: scale(1.05);' : '';
-    return `<button style="${lowBalStyle} ${activeStyle}" onclick="selectedStudentId=${s.id};render()">${s.firstName.toUpperCase()}</button>`;
+    return `<button style="${bal<=0?'background:var(--danger);color:#fff':''}; ${selectedStudentId===s.id?'border:2px solid #fff':''}" onclick="selectedStudentId=${s.id};render()">${s.firstName}</button>`;
   }).join("");
-
-  const activeS = getStudent(selectedStudentId);
-  studentView.innerHTML = activeS ? renderStudent(activeS) : "<div class='card'>No students found. Click the button above to add your first student.</div>";
+  const active = getStudent(selectedStudentId);
+  studentView.innerHTML = active ? renderStudent(active) : "";
 }
 
-// Initial Launch
 render();
 </script>
-
 </body>
 </html>
