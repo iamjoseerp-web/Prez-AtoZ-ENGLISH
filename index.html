@@ -45,7 +45,6 @@
   .day { border: 1px solid var(--border); padding: 8px; min-height: 50px; font-size: 12px; background: #080808; position: relative; }
   .day.empty { border: none; background: transparent; }
   
-  /* COLOR CODED SELECTS */
   .day select { width: 100%; margin-top: 5px; background: #000; border: 1px solid #333; font-size: 10px; font-weight: bold; }
   .day select.attended { color: #00ff00; }
   .day select.double { color: #3399ff; }
@@ -73,7 +72,7 @@
   <div id="studentView"></div>
 </main>
 
-<footer>Prez AtoZ English v1.1.6</footer>
+<footer>Prez AtoZ English v1.1.7</footer>
 
 <script>
 let students = JSON.parse(localStorage.getItem("students")||"[]");
@@ -89,6 +88,12 @@ function save() {
 function getStudent(id) { return students.find(s => s.id == id); }
 function balance(s) { return s.ledger.reduce((a, e) => a + (e.hours || 0), 0); }
 
+function updateHpW() {
+    const hpc = parseFloat(document.getElementById('hpc').value) || 0;
+    const lpw = parseFloat(document.getElementById('lpw').value) || 0;
+    document.getElementById('hpw_display').innerText = (hpc * lpw).toFixed(1);
+}
+
 function openStudentModal(id = null) {
   const s = id ? getStudent(id) : null;
   const m = document.createElement("div");
@@ -100,7 +105,11 @@ function openStudentModal(id = null) {
       <input id="ln" placeholder="Last Name" value="${s ? s.lastName : ''}">
       <input id="ph" placeholder="WhatsApp" value="${s ? s.phone : ''}">
       <select id="cefr">${['A1','A2','B1','B2','C1','C2'].map(l=>`<option value="${l}" ${s?.level===l?'selected':''}>${l}</option>`).join('')}</select>
-      <label class="small">Hrs Per Class</label><input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}">
+      <label class="small">Hours Per Class</label>
+      <input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}" oninput="updateHpW()">
+      <label class="small">Lessons per Week</label>
+      <input id="lpw" type="number" step="1" value="${s ? (s.lessonsPerWeek || 1) : 1}" oninput="updateHpW()">
+      <div style="padding: 10px 0;"><span class="small">Hours per Week:</span> <strong id="hpw_display" style="color:var(--gold)">${s ? (s.hoursPerClass * (s.lessonsPerWeek || 1)).toFixed(1) : '1.0'}</strong></div>
       <label class="small">Subscription $</label><input id="subPrice" type="number" value="${s ? s.subscriptionAmount : 210}">
       <label class="small">Due Date</label><input id="dd" type="date" value="${s ? s.dueDate : ''}">
       <button style="width:100%;" onclick="saveStudent(${id})">SAVE PROFILE</button>
@@ -114,6 +123,7 @@ function saveStudent(id) {
     firstName: document.getElementById('fn').value, lastName: document.getElementById('ln').value,
     phone: document.getElementById('ph').value, level: document.getElementById('cefr').value,
     hoursPerClass: parseFloat(document.getElementById('hpc').value),
+    lessonsPerWeek: parseFloat(document.getElementById('lpw').value),
     subscriptionAmount: parseFloat(document.getElementById('subPrice').value),
     dueDate: document.getElementById('dd').value
   };
