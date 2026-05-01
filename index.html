@@ -72,7 +72,7 @@
   <div id="studentView"></div>
 </main>
 
-<footer>Prez AtoZ English v1.1.7</footer>
+<footer>Prez AtoZ English v1.1.8</footer>
 
 <script>
 let students = JSON.parse(localStorage.getItem("students")||"[]");
@@ -88,12 +88,6 @@ function save() {
 function getStudent(id) { return students.find(s => s.id == id); }
 function balance(s) { return s.ledger.reduce((a, e) => a + (e.hours || 0), 0); }
 
-function updateHpW() {
-    const hpc = parseFloat(document.getElementById('hpc').value) || 0;
-    const lpw = parseFloat(document.getElementById('lpw').value) || 0;
-    document.getElementById('hpw_display').innerText = (hpc * lpw).toFixed(1);
-}
-
 function openStudentModal(id = null) {
   const s = id ? getStudent(id) : null;
   const m = document.createElement("div");
@@ -106,10 +100,11 @@ function openStudentModal(id = null) {
       <input id="ph" placeholder="WhatsApp" value="${s ? s.phone : ''}">
       <select id="cefr">${['A1','A2','B1','B2','C1','C2'].map(l=>`<option value="${l}" ${s?.level===l?'selected':''}>${l}</option>`).join('')}</select>
       <label class="small">Hours Per Class</label>
-      <input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}" oninput="updateHpW()">
+      <input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}">
       <label class="small">Lessons per Week</label>
-      <input id="lpw" type="number" step="1" value="${s ? (s.lessonsPerWeek || 1) : 1}" oninput="updateHpW()">
-      <div style="padding: 10px 0;"><span class="small">Hours per Week:</span> <strong id="hpw_display" style="color:var(--gold)">${s ? (s.hoursPerClass * (s.lessonsPerWeek || 1)).toFixed(1) : '1.0'}</strong></div>
+      <select id="lpw">
+        ${[1,2,3,4,5,6].map(num => `<option value="${num}" ${s?.lessonsPerWeek == num ? 'selected' : ''}>${num} Lesson${num > 1 ? 's' : ''} per Week</option>`).join('')}
+      </select>
       <label class="small">Subscription $</label><input id="subPrice" type="number" value="${s ? s.subscriptionAmount : 210}">
       <label class="small">Due Date</label><input id="dd" type="date" value="${s ? s.dueDate : ''}">
       <button style="width:100%;" onclick="saveStudent(${id})">SAVE PROFILE</button>
