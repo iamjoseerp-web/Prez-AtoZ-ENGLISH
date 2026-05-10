@@ -20,49 +20,37 @@
   button.danger { background: var(--danger); color: #fff; }
   button.wa { background: var(--wa); color: #fff; width: 100%; margin-top: 10px; }
   
-  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 16px; position: relative; }
-  
   .student-list { margin-bottom: 15px; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; }
   .student-list button { white-space: nowrap; border: 1px solid #444; background: #222; color: #ffffff; }
   .student-list button.active { border: 2px solid var(--gold); color: var(--gold); }
   
-  /* Status Colors */
   .status-ok { color: #00ff00; }
-  .status-warning { color: var(--warning); font-weight: bold; } /* Yellow for 1 week left */
+  .status-warning { color: var(--warning); font-weight: bold; } 
   
   @keyframes pulse-red {
     0% { background: transparent; }
-    50% { background: rgba(255, 69, 0, 0.3); }
+    50% { background: rgba(255, 69, 0, 0.4); }
     100% { background: transparent; }
   }
-  .status-critical { color: var(--danger); font-weight: bold; animation: pulse-red 1s infinite; padding: 5px; border-radius: 4px; }
+  .status-critical { color: #fff; font-weight: bold; animation: pulse-red 0.8s infinite; padding: 5px; border-radius: 4px; border: 1px solid var(--danger); }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-  th { text-align: left; color: var(--gold); padding: 10px; border-bottom: 2px solid var(--border); }
-  td { padding: 10px; border-bottom: 1px solid var(--border); }
-
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 16px; position: relative; }
   .calendar-header { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 25px 0 15px 0; }
   .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 10px; color: #bbb; text-align: center; }
   .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 5px; }
   .day { border: 1px solid var(--border); padding: 5px; min-height: 60px; font-size: 11px; background: #080808; }
   
   .day select { width: 100%; margin-top: 5px; background: #000; border: 1px solid #333; font-size: 9px; color: #fff; }
-  .day select.attended { border-left: 3px solid #00ff00; }
-  .day select.noshow { border-left: 3px solid var(--danger); }
-  .day select.free { border-left: 3px solid #3399ff; }
 
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
   .sheet { background: #1a1a1a; padding: 20px; border-radius: 8px; width: 100%; max-width: 400px; border: 1px solid var(--gold); }
   .sheet input, .sheet select { width: 100%; padding: 10px; margin: 8px 0; background: #000; color: #fff; border: 1px solid #444; }
-
-  .backup-zone { margin-top: 30px; padding: 20px; border: 1px dashed #444; text-align: center; }
+  label { font-size: 11px; color: var(--gold); font-weight: bold; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>PREZ AtoZ ENGLISH</h1>
-</header>
+<header><h1>PREZ AtoZ ENGLISH</h1></header>
 
 <main>
   <div class="controls">
@@ -70,7 +58,6 @@
     <button class="secondary" onclick="exportData()">💾 EXPORT BACKUP</button>
     <button class="secondary" onclick="importData()">📂 IMPORT BACKUP</button>
   </div>
-
   <div class="student-list" id="studentList"></div>
   <div id="studentView"></div>
 </main>
@@ -88,16 +75,14 @@ function save() {
 
 function getStudent(id) { return students.find(s => s.id == id); }
 
-function balance(s) { 
-  return s.ledger.reduce((a, e) => a + (e.hours || 0), 0); 
-}
+function balance(s) { return s.ledger.reduce((a, e) => a + (e.hours || 0), 0); }
+function totalEarnings(s) { return s.ledger.reduce((a, e) => a + (e.paymentAmount || 0), 0); }
 
-// Logic for Red/Yellow alerts
 function getStatusClass(s) {
   const bal = balance(s);
-  const weeklyHours = s.hoursPerClass * s.lessonsPerWeek;
-  if (bal <= (weeklyHours * 0.5)) return 'status-critical'; // Less than half a week left
-  if (bal <= weeklyHours) return 'status-warning'; // 1 week left
+  const weeklyHours = (s.hoursPerClass || 1) * (s.lessonsPerWeek || 1);
+  if (bal <= (weeklyHours * 0.5)) return 'status-critical';
+  if (bal <= weeklyHours) return 'status-warning';
   return 'status-ok';
 }
 
@@ -107,17 +92,19 @@ function openStudentModal(id = null) {
   m.className = "modal";
   m.innerHTML = `
     <div class="sheet">
-      <h3>${s ? 'Edit Student' : 'New Student'}</h3>
-      <input id="fn" placeholder="Name" value="${s ? s.firstName : ''}">
-      <input id="ph" placeholder="WhatsApp (e.g. 15551234567)" value="${s ? s.phone : ''}">
+      <h3>${s ? 'Student Settings' : 'New Student'}</h3>
+      <input id="fn" placeholder="Student Name" value="${s ? s.firstName : ''}">
+      <input id="ph" placeholder="WhatsApp Number" value="${s ? s.phone : ''}">
       <select id="cefr">
         ${['A1','A2','B1','B2','C1','C2'].map(l=>`<option value="${l}" ${s?.level===l?'selected':''}>Level: ${l}</option>`).join('')}
       </select>
-      <label style="font-size:10px">HOURS PER CLASS</label>
-      <input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}">
-      <label style="font-size:10px">LESSONS PER WEEK (2, 3, or 4)</label>
-      <input id="lpw" type="number" value="${s ? s.lessonsPerWeek : 2}">
-      <button style="width:100%" onclick="saveStudent(${id})">SAVE</button>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label>HRS / CLASS</label><input id="hpc" type="number" step="0.5" value="${s ? s.hoursPerClass : 1}"></div>
+        <div><label>CLASSES / WK</label><input id="lpw" type="number" value="${s ? s.lessonsPerWeek : 2}"></div>
+      </div>
+      <label>PRICE PER HOUR ($)</label>
+      <input id="pph" type="number" value="${s ? s.pricePerHour : 20}">
+      <button style="width:100%; margin-top:10px;" onclick="saveStudent(${id})">SAVE PROFILE</button>
       <button style="width:100%; margin-top:5px;" class="secondary" onclick="closeModal()">CANCEL</button>
     </div>`;
   document.body.appendChild(m);
@@ -130,6 +117,7 @@ function saveStudent(id) {
     level: document.getElementById('cefr').value,
     hoursPerClass: parseFloat(document.getElementById('hpc').value),
     lessonsPerWeek: parseFloat(document.getElementById('lpw').value),
+    pricePerHour: parseFloat(document.getElementById('pph').value),
     ledger: id ? getStudent(id).ledger : []
   };
   if (id) { Object.assign(getStudent(id), data); } 
@@ -137,12 +125,19 @@ function saveStudent(id) {
   closeModal(); save();
 }
 
-function addPayment(sid) {
+function addSubscription(sid) {
   const s = getStudent(sid);
   const cycleHours = s.hoursPerClass * s.lessonsPerWeek * 4;
-  const amt = prompt("Enter hours to add:", cycleHours);
-  if (amt) {
-    s.ledger.push({ id: Date.now(), date: new Date().toISOString().split('T')[0], type: "payment", hours: parseFloat(amt) });
+  const cycleCost = cycleHours * s.pricePerHour;
+  
+  if (confirm(`Adding 4-week cycle:\nHours: ${cycleHours}\nAmount Due: $${cycleCost}\n\nConfirm Payment?`)) {
+    s.ledger.push({ 
+      id: Date.now(), 
+      date: new Date().toISOString().split('T')[0], 
+      type: "payment", 
+      hours: cycleHours,
+      paymentAmount: cycleCost 
+    });
     save();
   }
 }
@@ -151,11 +146,7 @@ function setDay(sid, date, type) {
   const s = getStudent(sid);
   s.ledger = s.ledger.filter(e => e.date !== date || e.type === "payment");
   if (!type) return save();
-  
-  let hrs = 0;
-  if (type === "attended" || type === "noshow") hrs = -s.hoursPerClass;
-  // Vacation or Personal Day = 0 hours (No charge)
-  
+  let hrs = (type === "attended" || type === "noshow") ? -s.hoursPerClass : 0;
   s.ledger.push({ id: Date.now(), date, type, hours: hrs });
   save();
 }
@@ -164,28 +155,31 @@ function renderStudent(s) {
   const bal = balance(s);
   const statusCls = getStatusClass(s);
   const cycleHours = s.hoursPerClass * s.lessonsPerWeek * 4;
-  
-  const msg = `Hi ${s.firstName}! Just a reminder from Prez AtoZ English. You have ${bal} hours left. Your next 4-week subscription (${cycleHours} hours) is due soon. Thank you!`;
+  const cycleCost = cycleHours * s.pricePerHour;
+  const earnings = totalEarnings(s);
 
   let html = `
     <div class="card">
-      <div style="display:flex; justify-content:space-between;">
-        <h2>${s.firstName} <small style="font-size:12px; color:#888;">(${s.level})</small></h2>
-        <button class="secondary" onclick="openStudentModal(${s.id})">⚙️</button>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0;">${s.firstName} <span style="color:var(--gold); font-size:14px;">[${s.level}]</span></h2>
+        <button class="secondary" onclick="openStudentModal(${s.id})">EDIT</button>
       </div>
 
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin:15px 0;">
-        <div style="background:#000; padding:15px; border-radius:5px; text-align:center;">
-          <div style="font-size:10px; color:var(--gold)">HOURS REMAINING</div>
-          <div style="font-size:24px;" class="${statusCls}">${bal}</div>
+        <div style="background:#000; padding:10px; border-radius:5px; text-align:center;">
+          <div style="font-size:10px; color:var(--gold)">REMAINING HRS</div>
+          <div style="font-size:22px;" class="${statusCls}">${bal}</div>
         </div>
-        <div style="background:#000; padding:15px; border-radius:5px; text-align:center;">
-          <div style="font-size:10px; color:var(--gold)">WEEKLY LOAD</div>
-          <div style="font-size:24px;">${s.lessonsPerWeek}nd</div>
+        <div style="background:#000; padding:10px; border-radius:5px; text-align:center;">
+          <div style="font-size:10px; color:var(--gold)">TOTAL PAID</div>
+          <div style="font-size:22px; color:#25D366;">$${earnings}</div>
         </div>
       </div>
 
-      <button style="width:100%; margin-bottom:20px;" onclick="addPayment(${s.id})">+ RENEW SUBSCRIPTION (${cycleHours} hrs)</button>
+      <div style="background:rgba(212,175,55,0.1); padding:10px; border:1px solid var(--gold); border-radius:5px; margin-bottom:15px; text-align:center;">
+        <span style="font-size:12px;">Standard 4-Week Subscription: <strong>${cycleHours} hrs = $${cycleCost}</strong></span>
+        <button style="width:100%; margin-top:8px;" onclick="addSubscription(${s.id})">APPLY PAYMENT & ADD HOURS</button>
+      </div>
 
       <div class="calendar-header">
         <button class="secondary" onclick="changeMonth(-1)">◀</button>
@@ -198,88 +192,47 @@ function renderStudent(s) {
 
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  
   for(let i=0; i<firstDay; i++) html += `<div class="day" style="visibility:hidden"></div>`;
-  
   for(let d=1; d<=daysInMonth; d++) {
     const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const entry = s.ledger.find(e => e.date === dateStr && e.type !== "payment");
     const val = entry ? entry.type : "";
-    
-    html += `
-      <div class="day">
-        ${d}
-        <select onchange="setDay(${s.id}, '${dateStr}', this.value)" class="${val}">
-          <option value="">--</option>
-          <option value="attended" ${val==='attended'?'selected':''}>✅ Done</option>
-          <option value="noshow" ${val==='noshow'?'selected':''}>❌ NoShow</option>
-          <option value="vacation" ${val==='vacation'?'selected':''}>✈️ Vac</option>
-          <option value="personal" ${val==='personal'?'selected':''}>🏠 Teacher</option>
-        </select>
-      </div>`;
+    html += `<div class="day">${d}<select onchange="setDay(${s.id},'${dateStr}',this.value)"><option value="">-</option>
+      <option value="attended" ${val==='attended'?'selected':''}>Attended</option>
+      <option value="noshow" ${val==='noshow'?'selected':''}>NoShow (Pay)</option>
+      <option value="vacation" ${val==='vacation'?'selected':''}>Vacation</option>
+      <option value="teacher" ${val==='teacher'?'selected':''}>No Class</option>
+    </select></div>`;
   }
 
   html += `</div>
-      <div style="margin-top:20px;">
-        <button class="wa" onclick="window.open('https://wa.me/${s.phone}?text=${encodeURIComponent(msg)}')">SEND WHATSAPP REMINDER</button>
-      </div>
-      <button class="danger" style="width:100%; margin-top:20px; opacity:0.5" onclick="deleteStudent(${s.id})">Delete Student</button>
+      <button class="wa" style="margin-top:20px;" onclick="window.open('https://wa.me/${s.phone}?text=Hi ${s.firstName}, your Prez AtoZ subscription is due. Balance: ${bal} hrs. Next cycle: $${cycleCost}. Thank you!')">WHATSAPP REMINDER</button>
+      <button class="danger" style="width:100%; margin-top:20px; opacity:0.3;" onclick="deleteStudent(${s.id})">Remove Student</button>
     </div>`;
   return html;
 }
 
-function changeMonth(dir) {
-  viewMonth += dir;
-  if(viewMonth > 11) { viewMonth = 0; viewYear++; }
-  if(viewMonth < 0) { viewMonth = 11; viewYear--; }
-  render();
-}
-
+function changeMonth(dir) { viewMonth += dir; if(viewMonth > 11){viewMonth=0;viewYear++} if(viewMonth<0){viewMonth=11;viewYear--} render(); }
 function closeModal() { document.querySelector(".modal")?.remove(); }
-
-function deleteStudent(id) {
-  if(confirm("Are you sure?")) {
-    students = students.filter(s => s.id !== id);
-    selectedStudentId = students[0]?.id || null;
-    save();
-  }
-}
-
+function deleteStudent(id) { if(confirm("Delete student?")) { students = students.filter(s => s.id !== id); selectedStudentId = students[0]?.id || null; save(); } }
 function exportData() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(students));
-  const dlAnchorElem = document.createElement('a');
-  dlAnchorElem.setAttribute("href", dataStr);
-  dlAnchorElem.setAttribute("download", `prez_backup_${new Date().toISOString().split('T')[0]}.json`);
-  dlAnchorElem.click();
+  const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `prez_backup.json`); a.click();
 }
-
 function importData() {
-  const input = document.createElement('input');
-  input.type = 'file';
+  const input = document.createElement('input'); input.type = 'file';
   input.onchange = e => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.readAsText(file,'UTF-8');
-    reader.onload = readerEvent => {
-      students = JSON.parse(readerEvent.target.result);
-      save();
-    }
-  }
-  input.click();
+    const file = e.target.files[0]; const reader = new FileReader();
+    reader.readAsText(file,'UTF-8'); reader.onload = ev => { students = JSON.parse(ev.target.result); save(); }
+  }; input.click();
 }
 
 function render() {
   const list = document.getElementById("studentList");
-  list.innerHTML = students.map(s => `
-    <button class="${selectedStudentId == s.id ? 'active' : ''}" onclick="selectedStudentId=${s.id};render()">
-      ${s.firstName} (${balance(s)})
-    </button>
-  `).join("");
-  
+  list.innerHTML = students.map(s => `<button class="${selectedStudentId == s.id ? 'active' : ''}" onclick="selectedStudentId=${s.id};render()">${s.firstName} (${balance(s)})</button>`).join("");
   const active = getStudent(selectedStudentId);
-  document.getElementById("studentView").innerHTML = active ? renderStudent(active) : `<p style="text-align:center; margin-top:50px; color:#666;">No students added yet.</p>`;
+  document.getElementById("studentView").innerHTML = active ? renderStudent(active) : "";
 }
-
 render();
 </script>
 </body>
